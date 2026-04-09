@@ -1,0 +1,930 @@
+
+
+# Research Agenda: Short-Skew / Vanna Strategy Optimizer
+
+## 0. Working Notation
+
+Let
+
+$$
+w_t^0 := w_{t-1}^{+}
+$$
+
+be yesterday’s position mapped into today’s live universe.
+
+Define the trade vector:
+
+$$
+\Delta w_t := w_t - w_t^0
+$$
+
+Let
+
+$$
+B_t
+$$
+
+be the factor / Greek loading matrix.
+
+Important exposure vectors:
+
+$$
+b_{\Gamma,t}, \quad b_{\mathrm{Vega},t}, \quad b_{\mathrm{Vanna},t}
+$$
+
+Factor exposure:
+
+$$
+x_t = B_t^\top w_t
+$$
+
+Trade-induced exposure change:
+
+$$
+\Delta x_t = B_t^\top \Delta w_t
+$$
+
+Transaction cost:
+
+$$
+C_t(w_t, w_t^0) = \sum_i c_{i,t} \lvert w_{i,t} - w_{i,t}^0 \rvert
+$$
+
+---
+
+# Part I. Optimization Problem Reconstruction
+
+## 1. Rethink the Construction of the Optimization Problem
+
+The current optimizer may be solving the wrong problem.
+
+The real problem is not:
+
+$$
+{}\text{find the best option basket every day}
+$$
+
+The real problem is closer to:
+
+$$
+{}\text{maintain a tradable Gamma/Vega-neutral, positive-Vanna structure at low cost}
+$$
+
+So the optimizer should be designed around path stability, not only one-period MVO.
+
+---
+
+## 2. Reconstruct the Optimization
+
+Rewrite the optimizer around the current state:
+
+$$
+w_t^0 = w_{t-1}^{+}
+$$
+
+Instead of solving a fresh static problem every day, solve a state-dependent problem:
+
+$$
+\max_{w_t} \quad U_t(w_t) - U_t(w_t^0) - \kappa C_t(w_t, w_t^0)
+$$
+
+where
+
+$$
+U_t(w)
+$$
+
+is the estimated utility of holding portfolio $w$.
+
+A simple version:
+
+$$
+U_t(w) = \mu_t^\top w - \frac{\gamma}{2} w^\top \Sigma_t w
+$$
+
+The optimizer should only trade if the utility improvement is large enough relative to cost.
+
+---
+
+## 3. Soft Tracking for Factor Exposure
+
+Instead of forcing exact factor exposure targets, use soft tracking or bands.
+
+For Gamma and Vega:
+
+$$
+\lvert b_{\Gamma,t}^\top w_t \rvert \le \epsilon_{\Gamma}
+$$
+
+$$
+\lvert b_{\mathrm{Vega},t}^\top w_t \rvert \le \epsilon_{\mathrm{Vega}}
+$$
+
+Alternative soft-penalty form:
+
+$$
+\rho_{\Gamma}\left(b_{\Gamma,t}^\top w_t\right)^2
++
+\rho_{\mathrm{Vega}}\left(b_{\mathrm{Vega},t}^\top w_t\right)^2
+$$
+
+For Vanna, do not force a fixed target. Use a wide feasible range:
+
+$$
+L_{\mathrm{Vanna},t}
+\le
+b_{\mathrm{Vanna},t}^\top w_t
+\le
+U_{\mathrm{Vanna},t}
+$$
+
+---
+
+## 4. Turnover Cost vs. Estimated Return
+
+A key question:
+
+$$
+{}\text{Is the estimated alpha large enough to justify the turnover?}
+$$
+
+Compare expected alpha gain:
+
+$$
+\mu_t^\top \Delta w_t
+$$
+
+against transaction cost:
+
+$$
+\sum_i c_{i,t}\lvert \Delta w_{i,t} \rvert
+$$
+
+A useful diagnostic ratio:
+
+$$
+\frac{\mu_t^\top \Delta w_t}{\sum_i c_{i,t}\lvert \Delta w_{i,t} \rvert}
+$$
+
+If this ratio is often below 1, the optimizer is trading too much relative to its expected edge.
+
+---
+
+## 5. No-Trade Region
+
+Introduce a no-trade region.
+
+Current turnover penalty:
+
+$$
+\lambda_{\mathrm{tc}} \sum_i c_{i,t} \lvert w_{i,t} - w_{i,t}^0 \rvert
+$$
+
+Alternative no-trade constraint:
+
+$$
+\sum_i c_{i,t} \lvert w_{i,t} - w_{i,t}^0 \rvert \le \theta_t
+$$
+
+Or more directly:
+
+$$
+{}\text{trade only if}
+\quad
+U_t(w_t^\star) - U_t(w_t^0)
+>
+k C_t(w_t^\star, w_t^0)
+$$
+
+with
+
+$$
+k > 1
+$$
+
+This creates a real no-trade region rather than just a weak turnover penalty.
+
+---
+
+## 6. Maturity / Liquidity Preference
+
+Add contract preference or penalty terms based on:
+
+$$
+{}\text{tenor}, \quad \text{spread}, \quad \text{Vega}, \quad \text{liquidity}
+$$
+
+A generic penalty form:
+
+$$
+\lambda_p \sum_i p_{i,t} w_{i,t}^2
+$$
+
+Here, $p_{i,t}$ should be larger for undesirable contracts, for example:
+
+$$
+p_{i,t} = p(\text{wide spread}, \text{bad tenor}, \text{low liquidity}, \text{unstable Vega})
+$$
+
+If $p_{i,t}$ is instead defined as a positive preference score, then the sign should be reversed in the objective.
+
+---
+
+## 7. Diagnostic Tests
+
+### 7.1 Post-Optimization Exposure Tracker
+
+Track daily exposures after optimization:
+
+$$
+x_{\Gamma,t} = b_{\Gamma,t}^\top w_t
+$$
+
+$$
+x_{\mathrm{Vega},t} = b_{\mathrm{Vega},t}^\top w_t
+$$
+
+$$
+x_{\mathrm{Vanna},t} = b_{\mathrm{Vanna},t}^\top w_t
+$$
+
+Compare optimizer exposure path against manual strategy exposure path.
+
+---
+
+### 7.2 Turnover Statistics
+
+Break turnover down by:
+
+$$
+{}\text{tenor}, \quad \text{moneyness}, \quad \text{Vega}, \quad \text{spread}, \quad \text{option type}
+$$
+
+Useful statistics:
+
+$$
+\sum_i \lvert \Delta w_{i,t} \rvert
+$$
+
+$$
+\sum_i c_{i,t}\lvert \Delta w_{i,t} \rvert
+$$
+
+$$
+\frac{\sum_i c_{i,t}\lvert \Delta w_{i,t} \rvert}{\sum_i \lvert w_{i,t} \rvert}
+$$
+
+---
+
+### 7.3 Trade-Level Alpha / Cost Ratio
+
+For each trade, compare predicted factor alpha against cost:
+
+$$
+\frac{\pi_t^\top B_t^\top \Delta w_t}{\sum_i c_{i,t}\lvert \Delta w_{i,t} \rvert}
+$$
+
+If this ratio is small, the optimizer is paying cost without gaining much factor exposure.
+
+---
+
+## 8. Gross Factor PnL vs. Net PnL
+
+Track both:
+
+$$
+\mathrm{GrossPnL}_{t+1} = w_t^\top r_{t+1}
+$$
+
+and
+
+$$
+\mathrm{NetPnL}_{t+1} = \mathrm{GrossPnL}_{t+1} - C_t(w_t, w_t^0)
+$$
+
+Also compare:
+
+$$
+\mathrm{GrossFactorPnL}
+\quad
+{}\text{vs.}
+\quad
+\mathrm{NetPnL}
+$$
+
+This separates factor premium from implementation cost.
+
+---
+
+# Part II. Alpha, Cost, Risk, and Trading Path
+
+## 9. Alpha Change Speed
+
+Study how fast the alpha signal changes.
+
+Main question:
+
+$$
+{}\text{How do we get the desired exposure with lower cost?}
+$$
+
+If alpha rank changes too fast, the optimizer may chase contract-level noise.
+
+Need to compare:
+
+$$
+{}\text{alpha signal speed}
+\quad
+{}\text{vs.}
+\quad
+{}\text{bid-ask cost}
+$$
+
+---
+
+## 10. Risk Term May Produce Turnover
+
+The risk term itself may cause unnecessary turnover.
+
+A generic objective:
+
+$$
+\min_{w_t}
+\quad
+\lambda_{\mathrm{tc}} \sum_i c_{i,t}\lvert w_{i,t} - w_{i,t}^0 \rvert
++
+\frac{\gamma}{2} w_t^\top \Sigma_t w_t
+-
+\mu_t^\top w_t
++
+\lambda_p \sum_i p_{i,t} w_{i,t}^2
+$$
+
+Subject to:
+
+$$
+L_{\mathrm{Vanna},t}
+\le
+b_{\mathrm{Vanna},t}^\top w_t
+\le
+U_{\mathrm{Vanna},t}
+$$
+
+$$
+\lvert b_{\mathrm{Vega},t}^\top w_t \rvert \le \epsilon_{\mathrm{Vega}}
+$$
+
+plus other position and turnover constraints:
+
+$$
+\sum_i \lvert w_{i,t} \rvert \le A_t
+$$
+
+$$
+\sum_i \lvert \Delta w_{i,t} \rvert \le T_t
+$$
+
+$$
+\lvert w_{i,t} \rvert \le u_{i,t}
+$$
+
+Need to test whether $\Sigma_t$ causes contract switching even when factor exposure barely changes.
+
+---
+
+## 11. Alpha: Factor Exposure vs. Contract Score
+
+Clarify whether alpha should be attached to:
+
+$$
+{}\text{factor exposure}
+$$
+
+or
+
+$$
+{}\text{individual contract score}
+$$
+
+Structural factor alpha:
+
+$$
+\mu_t^{\mathrm{factor}} = \pi_{\mathrm{Vanna}} b_{\mathrm{Vanna},t}
+$$
+
+Contract-selection alpha:
+
+$$
+\mu_t^{\mathrm{selection}} = \eta s_t
+$$
+
+Combined form:
+
+$$
+\mu_t = \pi_{\mathrm{Vanna}} b_{\mathrm{Vanna},t} + \eta s_t
+$$
+
+Need to test whether $s_t$ has net value after spread cost.
+
+---
+
+## 12. Gamma / Vega Constraints
+
+Core exposure constraints:
+
+$$
+\lvert b_{\Gamma,t}^\top w_t \rvert \le \epsilon_{\Gamma}
+$$
+
+$$
+\lvert b_{\mathrm{Vega},t}^\top w_t \rvert \le \epsilon_{\mathrm{Vega}}
+$$
+
+Need to test whether these bands are too tight.
+
+If bands are too tight, optimizer may trade frequently just to remove small exposure drift.
+
+---
+
+## 13. Cross-Sectional Stat Arb vs. Short-Skew
+
+Need to separate two possible interpretations:
+
+$$
+{}\text{cross-sectional contract selection}
+$$
+
+versus
+
+$$
+{}\text{structural short-skew / Vanna exposure}
+$$
+
+The current strategy should not be treated as generic cross-sectional stat arb.
+
+The core hypothesis is:
+
+$$
+{}\text{positive Vanna / short-skew exposure earns a structural premium}
+$$
+
+Contract-level selection is secondary and must justify its cost.
+
+---
+
+## 14. Trade Gating
+
+Use trade gating instead of always re-optimizing.
+
+Two-step logic:
+
+1. Check whether current exposure is acceptable.
+2. Trade only if expected utility improvement is large enough.
+
+Exposure check:
+
+$$
+\lvert b_{\Gamma,t}^\top w_t^0 \rvert \le \epsilon_{\Gamma}
+$$
+
+$$
+\lvert b_{\mathrm{Vega},t}^\top w_t^0 \rvert \le \epsilon_{\mathrm{Vega}}
+$$
+
+$$
+b_{\mathrm{Vanna},t}^\top w_t^0 > 0
+$$
+
+If true, default action:
+
+$$
+w_t = w_t^0
+$$
+
+Only trade if:
+
+$$
+U_t(w_t^\star) - U_t(w_t^0) > k C_t(w_t^\star, w_t^0)
+$$
+
+where
+
+$$
+k > 1
+$$
+
+---
+
+## 15. Null-Space Turnover Diagnosis
+
+Decompose trades into exposure-changing and non-exposure-changing parts:
+
+$$
+\Delta w_t = \Delta w_t^{B} + \Delta w_t^{\perp}
+$$
+
+Here
+
+$$
+B_t^\top \Delta w_t^{B} \neq 0
+$$
+
+but
+
+$$
+B_t^\top \Delta w_t^{\perp} \approx 0
+$$
+
+The second part is null-space turnover.
+
+Track:
+
+$$
+\Delta x_t = B_t^\top (w_t - w_t^0)
+$$
+
+Compare exposure change against cost:
+
+$$
+\frac{\lvert \Delta x_t \rvert}{\sum_i c_{i,t}\lvert \Delta w_{i,t} \rvert}
+$$
+
+If this ratio is small, the optimizer is paying cost while barely changing factor exposure.
+
+---
+
+# Part III. Dynamic Optimizer Design
+
+## 16. Three-Mode Optimizer
+
+Use three modes:
+
+$$
+{}\text{Mode A: Hold}
+$$
+
+$$
+{}\text{Mode B: Repair}
+$$
+
+$$
+{}\text{Mode C: MVO Improve}
+$$
+
+The optimizer should not always run full MVO.
+
+---
+
+## 17. Feasible Set
+
+Define feasible set:
+
+$$
+\mathcal{P}_t =
+\left\{
+w :
+\lvert b_{\Gamma,t}^\top w \rvert \le \epsilon_{\Gamma},
+\quad
+\lvert b_{\mathrm{Vega},t}^\top w \rvert \le \epsilon_{\mathrm{Vega}},
+\quad
+b_{\mathrm{Vanna},t}^\top w > 0,
+\quad
+w \in U_t
+\right\}
+$$
+
+More stable version:
+
+$$
+\mathcal{P}_t =
+\left\{
+w :
+\lvert b_{\Gamma,t}^\top w \rvert \le \epsilon_{\Gamma},
+\quad
+\lvert b_{\mathrm{Vega},t}^\top w \rvert \le \epsilon_{\mathrm{Vega}},
+\quad
+L_{\mathrm{Vanna},t}
+\le
+b_{\mathrm{Vanna},t}^\top w
+\le
+U_{\mathrm{Vanna},t},
+\quad
+w \in U_t
+\right\}
+$$
+
+---
+
+## 18. If $\lambda_{\mathrm{tc}} \to \infty$ Still Trades, There Is a Structural Issue
+
+Important test:
+
+$$
+\lambda_{\mathrm{tc}} \to \infty
+$$
+
+If the optimizer still trades heavily, the issue is not turnover penalty size.
+
+Possible structural cause:
+
+$$
+U_t^{\mathrm{solve}}
+\neq
+U_t^{\mathrm{candidate}}
+\cup
+\operatorname{supp}(w_t^0)
+$$
+
+Better solve universe:
+
+$$
+U_t^{\mathrm{solve}} =
+U_t^{\mathrm{candidate}}
+\cup
+\operatorname{supp}(w_t^0)
+$$
+
+If old holdings are not in the new universe, the optimizer cannot hold old contracts, so it is forced to trade.
+
+Need to investigate universe construction carefully.
+
+---
+
+## 19. Factor Premium vs. Contract Selection
+
+Separate two sources of return:
+
+$$
+{}\text{factor premium}
+$$
+
+and
+
+$$
+{}\text{contract selection}
+$$
+
+Test sequence:
+
+$$
+\mu_t = \mu_t^{\mathrm{factor}}
+$$
+
+first.
+
+Then add contract score:
+
+$$
+\mu_t = \mu_t^{\mathrm{factor}} + \eta \mu_t^{\mathrm{selection}}
+$$
+
+Sweep:
+
+$$
+\eta \in \{0, 0.1, 0.25, 0.5, 1.0\}
+$$
+
+If $\eta = 0$ works but $\eta > 0$ hurts net PnL, the contract score is causing costly turnover.
+
+---
+
+## 20. Rank-Gaussianization and Rank Stability
+
+If alpha score is rank-gaussianized, check whether rank information persists.
+
+Compute:
+
+$$
+\operatorname{corr}(z_t, z_{t-1}^{+})
+$$
+
+If rank correlation is low, the score changes too fast for a high-spread option universe.
+
+Use the three-mode test:
+
+$$
+\{\text{Hold}, \text{Repair}, \text{Improve by MVO}\}
+$$
+
+Define utility:
+
+$$
+U_t(w) = \mu_t^\top w - \frac{\gamma}{2} w^\top \Sigma_t w
+$$
+
+Accept Improve mode only if:
+
+$$
+U_t(w_t^\star) - U_t(w_t^0) > k C_t(w_t^\star, w_t^0)
+$$
+
+with
+
+$$
+k > 1
+$$
+
+---
+
+## 21. Smooth Alpha Signal or Shrink Alpha
+
+Smooth the alpha signal or rank:
+
+$$
+\hat z_{i,t} = (1 - \rho)\tilde z_{i,t} + \rho \hat z_{i,t-1}^{+}
+$$
+
+Here,
+
+$$
+	ilde z_{i,t}
+$$
+
+is the raw current signal, and
+
+$$
+\hat z_{i,t-1}^{+}
+$$
+
+is yesterday’s smoothed signal mapped into today’s universe.
+
+This reduces unnecessary switching caused by noisy daily rank changes.
+
+Alternative shrinkage:
+
+$$
+\mu_t^{\mathrm{shrunk}} = \eta \mu_t
+$$
+
+with
+
+$$
+0 \le \eta \le 1
+$$
+
+---
+
+## 22. Alpha-Free Version of the Optimization
+
+Before using alpha, test an alpha-free optimizer.
+
+Objective:
+
+$$
+\min_{w_t}
+\quad
+C_t(w_t, w_t^0)
++
+\frac{1}{2} w_t^\top \Sigma_t w_t
++
+\lambda_{\mathrm{liq}} \sum_i p_{i,t} w_{i,t}^2
+$$
+
+Subject to:
+
+$$
+\lvert b_{\Gamma,t}^\top w_t \rvert \le \epsilon_{\Gamma}
+$$
+
+$$
+\lvert b_{\mathrm{Vega},t}^\top w_t \rvert \le \epsilon_{\mathrm{Vega}}
+$$
+
+$$
+L_t \le z_t^\top w_t \le U_t
+$$
+
+Here $z_t$ can represent the target structural exposure, for example Vanna:
+
+$$
+z_t = b_{\mathrm{Vanna},t}
+$$
+
+This test answers:
+
+$$
+{}\text{Can the optimizer maintain the desired exposure cheaply even without alpha?}
+$$
+
+If alpha-free optimization already trades too much, the problem is likely universe construction, constraints, or cost modeling.
+
+---
+
+# Suggested Research Flow
+
+## Stage 1. Verify the Baseline
+
+Re-run the manual strategy under the same cost model:
+
+$$
+\mathrm{GrossPnL}, \quad \mathrm{SpreadCost}, \quad \mathrm{NetPnL}
+$$
+
+This checks whether the backtest engine and cost accounting are consistent.
+
+---
+
+## Stage 2. Alpha-Free Hold / Repair Test
+
+Run only:
+
+$$
+{}\text{Hold}
+\quad
+{}\text{or}
+\quad
+{}\text{minimum-cost Repair}
+$$
+
+No MVO improve, no contract alpha.
+
+Goal:
+
+$$
+{}\text{Can the optimizer maintain Gamma/Vega-neutral positive-Vanna exposure cheaply?}
+$$
+
+---
+
+## Stage 3. Add Structural Vanna Alpha
+
+Use:
+
+$$
+\mu_t = \pi_{\mathrm{Vanna}} b_{\mathrm{Vanna},t}
+$$
+
+No contract score yet.
+
+Goal:
+
+$$
+{}\text{Test whether structural Vanna premium is tradable after cost.}
+$$
+
+---
+
+## Stage 4. Add Trade Gating
+
+Only trade if:
+
+$$
+U_t(w_t^\star) - U_t(w_t^0) > k C_t(w_t^\star, w_t^0)
+$$
+
+This separates real improvement from optimizer churn.
+
+---
+
+## Stage 5. Add Contract Score
+
+Use:
+
+$$
+\mu_t = \pi_{\mathrm{Vanna}} b_{\mathrm{Vanna},t} + \eta s_t
+$$
+
+Sweep:
+
+$$
+\eta \in \{0, 0.1, 0.25, 0.5, 1.0\}
+$$
+
+Goal:
+
+$$
+{}\text{Check whether contract-level selection survives bid-ask cost.}
+$$
+
+---
+
+## Stage 6. Universe and Null-Space Diagnostics
+
+Use solve universe:
+
+$$
+U_t^{\mathrm{solve}} =
+U_t^{\mathrm{candidate}}
+\cup
+\operatorname{supp}(w_t^0)
+$$
+
+Track:
+
+$$
+\Delta x_t = B_t^\top \Delta w_t
+$$
+
+Track null-space cost:
+
+$$
+\frac{\lvert \Delta x_t \rvert}{\sum_i c_{i,t}\lvert \Delta w_{i,t} \rvert}
+$$
+
+Low value means:
+
+$$
+{}\text{high cost, little exposure change}
+$$
+
+That is the key sign of null-space turnover.
