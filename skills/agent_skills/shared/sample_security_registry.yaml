@@ -1,0 +1,160 @@
+version: 1
+
+defaults:
+  frequency: daily
+  field_priority:
+    price:
+      - px_last
+      - close
+    total_return:
+      - tot_return_index
+      - px_total_return
+    yield:
+      - yield_to_maturity
+      - par_yield
+
+securities:
+  spx:
+    internal_name: S&P 500 Index
+    aliases:
+      - SPX
+      - S&P 500
+      - S and P 500
+      - US large cap index
+    asset_class: equity_index
+    vendors:
+      bloomberg:
+        ticker: SPX Index
+        default_fields: [PX_LAST]
+      datastream:
+        ticker: S&PCOMP
+        default_fields: [P]
+    defaults:
+      dataset: price
+      field: px_last
+      frequency: daily
+      currency: USD
+    output:
+      column: spx
+      family: spot_index
+    notes: Spot index level. Use an explicit total return field or a separate registry entry if total return is required.
+
+  vix:
+    internal_name: CBOE Volatility Index
+    aliases:
+      - VIX
+      - VIX Index
+      - implied volatility index
+    asset_class: volatility_index
+    vendors:
+      bloomberg:
+        ticker: VIX Index
+        default_fields: [PX_LAST]
+      datastream:
+        ticker: VIXCLS
+        default_fields: [P]
+    defaults:
+      dataset: price
+      field: px_last
+      frequency: daily
+      currency: USD
+    output:
+      column: vix
+      family: spot_index
+    notes: Spot volatility index. Do not confuse with VIX futures; use a separate registry entry for futures contracts.
+
+  agg:
+    internal_name: iShares Core U.S. Aggregate Bond ETF
+    aliases:
+      - AGG
+      - US aggregate bond ETF
+      - Barclays aggregate ETF
+    asset_class: bond_etf
+    vendors:
+      bloomberg:
+        ticker: AGG US Equity
+        default_fields: [TOT_RETURN_INDEX_GROSS_DVDS]
+      datastream:
+        ticker: U:AGG
+        default_fields: [RI]
+    defaults:
+      dataset: total_return
+      field: tot_return_index
+      frequency: daily
+      currency: USD
+    output:
+      column: agg
+      family: total_return_index
+    notes: Default is total return because research users usually want investable bond performance, not raw ETF price.
+
+  dxy:
+    internal_name: U.S. Dollar Index
+    aliases:
+      - DXY
+      - dollar index
+      - US dollar index
+    asset_class: fx
+    vendors:
+      bloomberg:
+        ticker: DXY Curncy
+        default_fields: [PX_LAST]
+      datastream:
+        ticker: USDXI
+        default_fields: [P]
+    defaults:
+      dataset: price
+      field: px_last
+      frequency: daily
+      currency: USD
+    output:
+      column: dxy
+      family: spot_index
+    notes: Index level, not a return series.
+
+  cl1:
+    internal_name: WTI Crude Oil Front Future Continuous
+    aliases:
+      - CL1
+      - WTI front future
+      - crude front month
+    asset_class: commodity
+    vendors:
+      bloomberg:
+        ticker: CL1 Comdty
+        default_fields: [PX_LAST]
+      datastream:
+        ticker: CLc1
+        default_fields: [P]
+    defaults:
+      dataset: price
+      field: px_last
+      frequency: daily
+      currency: USD
+    output:
+      column: cl1
+      family: future_continuous
+    notes: Continuous futures series. Roll methodology is vendor-specific and should be documented in repo code if material.
+
+  ust_10y:
+    internal_name: U.S. 10Y Treasury Yield
+    aliases:
+      - US 10Y
+      - UST 10Y
+      - 10 year Treasury yield
+    asset_class: rates
+    vendors:
+      bloomberg:
+        ticker: USGG10YR Index
+        default_fields: [PX_LAST]
+      datastream:
+        ticker: US10YT=RR
+        default_fields: [YLD]
+    defaults:
+      dataset: yield
+      field: par_yield
+      frequency: daily
+      currency: USD
+    output:
+      column: ust_10y
+      family: sovereign_yield
+    notes: Yield series, not bond total return. Bloomberg field mapping may require adapter normalization from vendor-native yield fields.

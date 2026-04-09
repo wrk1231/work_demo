@@ -1,0 +1,38 @@
+figure.facecolor: white
+figure.dpi: 120
+savefig.dpi: 144
+savefig.facecolor: white
+savefig.transparent: False
+
+axes.facecolor: floralwhite
+axes.edgecolor: dimgrey
+axes.linewidth: 0.8
+axes.grid: True
+axes.axisbelow: True
+axes.titlesize: 13
+axes.titleweight: semibold
+axes.labelsize: 11
+axes.labelcolor: black
+axes.prop_cycle: cycler(color=['teal', 'darkorange', 'slateblue', 'olivedrab', 'crimson', 'steelblue'])
+
+grid.color: lightgrey
+grid.linewidth: 0.7
+grid.alpha: 0.8
+grid.linestyle: -
+
+font.family: DejaVu Sans
+font.size: 10
+
+xtick.color: dimgrey
+ytick.color: dimgrey
+xtick.labelsize: 10
+ytick.labelsize: 10
+
+legend.frameon: False
+legend.fontsize: 10
+
+lines.linewidth: 1.9
+lines.markersize: 5
+
+patch.edgecolor: white
+patch.force_edgecolor: False

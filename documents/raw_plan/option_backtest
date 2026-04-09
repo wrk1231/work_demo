@@ -1,0 +1,36 @@
+now i need to build a option backtester for european options:
+
+You should only do mark-to-market operation; do not assume any strategy like cutting-loss, taking-profit etc., all the strategy is given externally, you ONLY do MARK TO MARKET. nothing more. you just need to do it well.
+
+For now, it is only options (we will only use the data in data/synthetic_options.csv) AND EVERY OPTION IS EUROPEAN OPTION.
+
+Input:
+it will be a dataframe with columns [date, option_name, target_units], this is pre-given, and for simplicity, you can assume target_units is the fixed target unit for each trading day, I will not change the target units by any chance once given.
+
+since we will only use the data in data/synthetic_options.csv, there won't be anything beyond that, so you can easily generate the metadata of those options (expiration, strike, call/put etc.)
+
+Logic:
+you need to 
+a) maintain the portfolio status, like how many cash do we have, initially it can be $10M, and how many units of each option do we have  in our portfolio 
+b) mark to market correctly for all the options, when we buy an option, it should be marked at ASK price; when we sell an option, it should be market at BID price; when an option expire, you should calculate the settlement value, here we assume cash settlement for all european options. Since ASK > BID, buy and sell an option should occur transaction cost. transaction cost should be booked in the first day of the trade.
+
+c) you should differentiate calls and puts properly, as they have different treatment when expire.
+d) units can be float numbers, no need to force integer units, can be something like 3.14 or 1.5 etc. units can be negative.
+
+e)you need to check if total portfolio value goes below 0, default config is allowed, but i should be able to turn off it later.
+
+f) you need to check if there is sufficient money to do the next day's trade, make it configurable, now for simplicity, default behavior is to assume we can borrow at 0 interest rate, so insufficient fund wont stop backtest
+
+g) cash is sitting on 0 interest rate, no need to model interests.
+
+Output:
+you should have comprehensive output and simple output.
+
+Simple output: time series of portfolio value everyday
+
+Comprehensive output: detailed dataframe of each day's position, include for given date, what are the holdings, what are their bid/ask and current market value (assume we can liquidate right now, for long position we sell them, so mark at bid; for short position we buy back all, so mark at ask), and the aggregated transaction cost at each option level as well as portfolio level;
+capital weights of each position at portfolio etc., you can add reasonable metrics to the output.
+
+Others:
+You should use the sample data to generate trading orders and then backtest it.
+

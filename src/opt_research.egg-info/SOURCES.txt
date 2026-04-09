@@ -1,0 +1,7 @@
+README.md
+pyproject.toml
+src/opt_research.egg-info/PKG-INFO
+src/opt_research.egg-info/SOURCES.txt
+src/opt_research.egg-info/dependency_links.txt
+src/opt_research.egg-info/requires.txt
+src/opt_research.egg-info/top_level.txt
